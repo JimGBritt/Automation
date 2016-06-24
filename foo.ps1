@@ -30,15 +30,15 @@ $jobID = $PSPrivateMetadata.JobId.Guid
 $Job = Get-AzureRmAutomationJob -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount -id $jobID  
 $RunbookName = $Job.RunbookName
 
-[int]$RunFrequency = 300
-$ScheduleName = $RunbookName
+[int]$RunFrequency = 10
+$ScheduleName = "sqlazure"
 
 $ErrorActionPreference = "SilentlyContinue"
 #$ScheduleDetails = Get-AzureRmAutomationSchedule -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount -Name $ScheduleName 
 $RemoveExistingSchedule = Remove-AzureRmAutomationSchedule -Name $ScheduleName -ResourceGroupName $AAResourceGroup -AutomationAccountName $AAAccount -Force | Out-Null
+$ErrorActionPreference = "Stop"
 
-
-$RunbookStartTime = $([DateTime]::Now.Add([TimeSpan]::FromSeconds($RunFrequency+1)))
+$RunbookStartTime = $([DateTime]::Now.Add([TimeSpan]::FromMinutes($RunFrequency)))
 $Schedule = New-AzureRmAutomationSchedule -Name $ScheduleName -StartTime $RunbookStartTime -OneTime -AutomationAccountName $AAAccount -ResourceGroupName $AAResourceGroup
 #$ScheduleSet = Set-AzureRmAutomationSchedule -Name "Test2" -AutomationAccountName "AzureAutoEast" -ResourceGroupName "OaaSCSMADSF7K6DN7E6TOLTJCJKYN4K3XUHJTZI7FZG5LBBNSNSVLZ4USA-East-US" -IsEnabled $true
 #Get-AzureRmAutomationSchedule -Name "Test2" -AutomationAccountName "AzureAutoEast" -ResourceGroupName "OaaSCSMADSF7K6DN7E6TOLTJCJKYN4K3XUHJTZI7FZG5LBBNSNSVLZ4USA-East-US"
