@@ -255,8 +255,8 @@ param
 
     # Hashtable for tag based query
     # Needs to be in the format of 
-    # example: -tags @{PatchWindow = "SaturdayMorning";ADMIN = "JIM"}
-    [hashtable]$tags = @{PatchWindow = "SaturdayMorning";ADMIN = "JIM"},
+    # example: -tags @{PatchWindow = "SaturdayMorning";ENV = "PROD"}
+    [hashtable]$tags,
 
 #    Workspace ID (optional)
     # This is the actual Workspace ID (client ID) of the Log Analytics workspace
@@ -793,7 +793,7 @@ $azq = New-AzAutomationUpdateManagementAzureQuery -ResourceGroupName $AAResource
 # If Force used, will update without prompting
 if ($Force -OR $PSCmdlet.ShouldContinue("This operation will create an Azure Update Management Deployment Schedule called ""$($SoftwareUpdateScheduleName)"" in your selected target subscription. Continue?","Creating Target Schedule named ""$SoftwareUpdateScheduleName""") )
 {
-    # BUG - Description doesn't populate : https://msazure.visualstudio.com/One/_workitems/edit/6524083
+    # BUG - Description doesn't populate
     if($ExpiryTime)
     {
         $Schedule = New-AzAutomationSchedule -Name $SoftwareUpdateScheduleName -AutomationAccountName $AAAcountName `
