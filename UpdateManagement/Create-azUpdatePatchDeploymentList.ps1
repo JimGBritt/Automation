@@ -32,7 +32,7 @@ Mar 20, 2020 1.0
 
 <#  
 .SYNOPSIS  
-  A script to programatically create an Azure Update Management Patch list object based on a pre-prod environment
+  A script to programmatically create an Azure Update Management Patch list object based on a pre-prod environment
   Pre-Prod --> PROD scenario
   
   Note  This script currently leverages the Az cmdlets
@@ -147,7 +147,7 @@ Mar 20, 2020 1.0
     -duration (New-TimeSpan -Hours 4) `
     -WeekInterval 3 
   Will use resource group and workspace name as your target workspace within specified subscription and will prompt for other details.
-  This update shedule will only run on Sunday and Monday with a duration of 4 hours every 3 weeks starting on March 15, 20020
+  This update schedule will only run on Sunday and Monday with a duration of 4 hours every 3 weeks starting on March 15, 20020
 
 .EXAMPLE
 .\Create-azUpdatePatchDeploymentList.ps1 -SoftwareUpdateScheduleName "Linux Update" `
@@ -205,7 +205,7 @@ Mar 20, 2020 1.0
     -PostScript "UpdateManagement-TurnOffVMs" `
     -force
   This example provides the additional option of a pre and post script from Azure Automation.
-  This example assumes these runbooks have already been downloaded from the Script Center and installed in yoru Azure Automation Account
+  This example assumes these runbooks have already been downloaded from the Script Center and installed in your Azure Automation Account
   See: https://gallery.technet.microsoft.com/scriptcenter/Update-Management-Turn-On-ffadfc26 and
   https://docs.microsoft.com/en-us/azure/automation/pre-post-scripts for more information.
 
@@ -561,6 +561,8 @@ If($ClassificationCategories)
         {
             write-host "You've chosen Unclassified! RebootOnly will be set." -ForegroundColor Red
             $RebootOptions = 'RebootOnly'
+            $ClassificationCategories = @("Unclassified")
+            break
         }
     }
 } 
