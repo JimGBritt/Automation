@@ -136,7 +136,7 @@ Mar 20, 2020 1.0
     All Parameters need to have proper values to succeed
 
 .EXAMPLE
-.\Create-azUpdatePatchDeploymentList.ps1 -SoftwareUpdateScheduleName "Windows Update" `
+.\Create-azUpdatePatchDeploymentList.ps1 -SoftwareUpdateScheduleName "Linux Update" `
     -TargetOS Linux `
     -StartTime '03/15/2020' `
     -AAAcountName AzureAutoEast `
@@ -147,7 +147,22 @@ Mar 20, 2020 1.0
     -duration (New-TimeSpan -Hours 4) `
     -WeekInterval 3 
   Will use resource group and workspace name as your target workspace within specified subscription and will prompt for other details.
-  
+  This update shedule will only run on Sunday and Monday with a duration of 4 hours every 3 weeks starting on March 15, 20020
+
+.EXAMPLE
+.\Create-azUpdatePatchDeploymentList.ps1 -SoftwareUpdateScheduleName "Linux Update" `
+    -TargetOS Linux `
+    -tags @{PatchWindow = "SaturdayMorning";ENV = "PROD"} `
+    -StartTime '03/15/2020' `
+    -AAAcountName AzureAutoEast `
+    -AAResourceGroupName OI-Default-East-US `
+    -WSID b571a98c-6828-4045-bb5f-857543f2a9e3 `
+    -queryFilterOperator any `
+    -DaysOfWeek "Sunday","Monday" `
+    -duration (New-TimeSpan -Hours 4) `
+    -WeekInterval 3 
+  This example adds the option of specifying tags to add to your Azure Query for targeting
+
 .EXAMPLE
 .\Create-AzUpdatePatchDeploymentList.ps1 -SoftwareUpdateScheduleName "Windows Update" `
     -TargetOS Windows `
@@ -202,7 +217,7 @@ Mar 20, 2020 1.0
 
 .LINK
     This script posted to and discussed at the following locations:PowerShell Gallery    	
-    https://aka.ms/ExportAzLALogs
+    https://aka.ms/JimBritt
 #>
 
 #[cmdletbinding(
@@ -497,6 +512,7 @@ If($TargetOS -eq 'Linux')
 # If classifications were not provided via parameter, let's prompt for them (unless we have a query already given via parameter)
 if(!($ClassificationList))
 {
+    $ClassificationsChosen =@()
     While(!($ClassificationsChosen))
     {
         $CAnalysis=@()
@@ -514,7 +530,7 @@ if(!($ClassificationList))
                 
         [array]$ClassificationsChosen = (Read-host "Please provide # of classification(s) to process (separated by a comma) Note: Unclassified Reboots Only!").ToUpper()
                 
-        if($ClassificationsChosen -and (($ClassificationsChosen[0] -in 1..($ClassificationCategories.count -1))-or ($ClassificationsChosen[0].contains(","))))
+        if($ClassificationsChosen -and (($ClassificationsChosen[0] -in 1..($Classifications.count -1))-or ($ClassificationsChosen[0].contains(","))))
         {
             # Trim spaces out
             $ClassificationsChosen = $ClassificationsChosen.replace(" ","")
@@ -745,7 +761,7 @@ if(!($queryScope))
 if(!($queryLocation))
 {
     $RAnalysis=@()
-
+    $queryLocation=@()
     $Regions = (Get-AzLocation).Location
     
     foreach($Region in $Regions)
@@ -767,6 +783,17 @@ if(!($queryLocation))
             $queryLocation = $queryLocation + $($Reg.Location)
         }
     }
+    else 
+    {
+        # Trim spaces out
+        $RegionsChosen = $RegionsChosen.replace(" ","")
+        [array]$RegionsChosen = ($RegionsChosen -split ",")
+        foreach($R in $RegionsChosen)
+        {
+            $queryLocation = $queryLocation + $($RAnalysis[$R-1].Location)
+        }
+    }
+
     Write-Host "You chose the following location(s)" -ForegroundColor Cyan
     foreach($Line in $queryLocation)
     {
@@ -793,7 +820,7 @@ $azq = New-AzAutomationUpdateManagementAzureQuery -ResourceGroupName $AAResource
 # If Force used, will update without prompting
 if ($Force -OR $PSCmdlet.ShouldContinue("This operation will create an Azure Update Management Deployment Schedule called ""$($SoftwareUpdateScheduleName)"" in your selected target subscription. Continue?","Creating Target Schedule named ""$SoftwareUpdateScheduleName""") )
 {
-    # BUG - Description doesn't populate
+    # BUG Description doesn't currently populate
     if($ExpiryTime)
     {
         $Schedule = New-AzAutomationSchedule -Name $SoftwareUpdateScheduleName -AutomationAccountName $AAAcountName `
@@ -833,7 +860,6 @@ if ($Force -OR $PSCmdlet.ShouldContinue("This operation will create an Azure Upd
         -RebootSetting $RebootOptions
         write-host "Creating / Updating the Target Azure Update Management Deployment Schedule based on ""$SoftwareUpdateScheduleName"" for Windows" -ForegroundColor Cyan
     }
-    # BUG - Linux Classification list does not match UI when sent via cmdlet (pending bug or backlog item - under review)
     elseif ($TargetOS -eq "Linux") {
         $Null = New-AzAutomationSoftwareUpdateConfiguration -ResourceGroupName $AAResourceGroupName `
         -AutomationAccountName $AAAcountName `
