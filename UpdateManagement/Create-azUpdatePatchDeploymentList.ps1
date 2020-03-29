@@ -26,7 +26,7 @@ https://aka.ms/JimBritt
 .EXTERNALSCRIPTDEPENDENCIES 
 
 .RELEASENOTES
-Mar 20, 2020 1.0
+Mar 29, 2020 1.0
     Initial
 #>
 
@@ -36,6 +36,7 @@ Mar 20, 2020 1.0
   Pre-Prod --> PROD scenario
   
   Note  This script currently leverages the Az cmdlets
+  https://www.powershellgallery.com/packages/Create-AzUpdatePatchDeploymentList/
   
 .DESCRIPTION  
   This script meant to help you automate the creating of a producation Azure Update Management Deployment Schedule
@@ -212,7 +213,7 @@ Mar 20, 2020 1.0
 
 .NOTES
    AUTHOR: Jim Britt Senior Program Manager - Azure CXP API
-   LASTEDIT: March 20, 2020
+   LASTEDIT: March 29, 2020
    Initial
 
 .LINK
@@ -226,44 +227,54 @@ Mar 20, 2020 1.0
 param
 (
     # SubscriptionId of where your SOURCELog Analytics Workspace is to get saved SearchID or leveraging query param (optional)
+    [Parameter(Mandatory=$false)]
     [guid]$SourceSubscriptionID,
 
+    # Target Subscription where the Azure Automation Account is located for the update management configuration
+    [Parameter(Mandatory=$false)]
     [guid]$TargetSubscriptionID,
 
     # Resource Group name for Azure Automation Account
+    [Parameter(Mandatory=$false)]    
     [string]$AAResourceGroupName,
-
+    
+    # Azure Automation Account Name for the target subscription / update management configuration
+    [Parameter(Mandatory=$false)]
     [string]$AAAcountName,
 
     # List of Classifications of updates to include
     # Example values
     # -Classifications "Critical,Security,UpdateRollup"
+    [Parameter(Mandatory=$false)]
     [array]$ClassificationList,
 
     # List of approved KBs (if not collected from reference workspace)
     ## NEED TO ADD LOGIC FOR THIS if provided
     # Example values
     # -KBLIST "KB12345, KB21234"
+    [Parameter(Mandatory=$false)]
     [array]$KBLIST,
 
     # Array of scopes to include in the scope for the update management object
     # Example values
     # -queryScope  "/subscriptions/22e2445a-0984-4fa5-86a4-0280d76c4b2c/resourceGroups/resourceGroupName,/subscriptions/32e2445a-0984-4fa5-86a4-0280d76c4b2d/"
+    [Parameter(Mandatory=$false)]
     [array]$queryScope,
 
     # Regions to narrow in the scope for resources to update
     # example values
     # -querylocation "EastUS", "WestUS""
+    [Parameter(Mandatory=$false)]
     [array]$queryLocation,
 
     # Used for the Azure Query Logic to determine if all or any of the filters will evaluate as true if met
-    [Parameter()]
+    [Parameter(Mandatory=$false)]
     [ValidateSet('Any','All')]
     [string[]]
     $queryFilterOperator= 'All',
 
     # How you want to reboot.  note: reboot only conincides with undefined in Linux classification option.
-    [Parameter()]
+    [Parameter(Mandatory=$false)]
     [ValidateSet('IfRequired','Never', 'Always', 'RebootOnly')]
     [string[]]
     $RebootOptions = 'IfRequired',
@@ -271,18 +282,22 @@ param
     # Hashtable for tag based query
     # Needs to be in the format of 
     # example: -tags @{PatchWindow = "SaturdayMorning";ENV = "PROD"}
+    [Parameter(Mandatory=$false)]
     [hashtable]$tags,
 
 #    Workspace ID (optional)
     # This is the actual Workspace ID (client ID) of the Log Analytics workspace
     # If ommitted, you will be promted to select a workspace in the source subscription
+    [Parameter(Mandatory=$false)]
     [string]$WSID,
     
     # Log Analytics SavedSearchID (use ad hoc query if preferred)
     # Example Script to leverage for aquiring the saved Search IDs: https://www.powershellgallery.com/packages/Invoke-AzOperationalInsightsQueryExport 
+    [Parameter(Mandatory=$false)]
     [string]$SavedSearchID,
     
     # Ad hoc query in lieu of SavedSearchID
+    [Parameter(Mandatory=$false)]
     [string]$ApplicablePatchesQuery,
 
     # Defaults to 5 days from now but can be overridden from cmdline
@@ -292,48 +307,56 @@ param
     # When do you want to patch according to set schedule
     # Array set of days for example
     # -DaysOfWeek "Sunday,Monday,Tuesday,Wednesday,Thursday,Friday,Saturday"
+    [Parameter(Mandatory=$false)]
     [array]$DaysOfWeek=('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'),
 
     # Defaults to every week for interval - can override from cmdline
+    [Parameter(Mandatory=$false)]
     [string]$WeekInterval = 1,
 
     # How long will the script run 
     # Defaults to 2 hours
+    [Parameter(Mandatory=$false)]
     [System.TimeSpan]$duration = (New-TimeSpan -Hours 2),
 
     # Software Update Schedule Name default - use parameter to define
+    [Parameter(Mandatory=$false)]
     [string]$SoftwareUpdateScheduleName = "SoftwareUpdateSchedule",
 
     # Description of Software Update schedule - defaults to "Software Update".  Use parameter to override
+    [Parameter(Mandatory=$false)]
     [string]$SoftwareUpdateScheduleDescr = "Software Update",
 
     # Which OS to target - Windows is default
-    [Parameter()]
+    [Parameter(Mandatory=$false)]
     [ValidateSet('Windows', 'Linux')]
     [string[]]
     $TargetOS = 'Windows',
 
     # Pre and Post Scripts for Azure Update Management Configuration
     # Example -PreScript "UpdateManagement-TurnOnVMs"
+    [Parameter(Mandatory=$false)]
     [string]$PreScript,
 
     # Hashtable for prescript parameters
     # Needs to be in the format of 
     # example: -PreScriptParams @{Drive = "C";LOG = "Results.txt"}
+    [Parameter(Mandatory=$false)]
     [hashtable]$PreScriptParams,
 
     # Example -PostScript "UpdateManagement-TurnOffVMs"
+    [Parameter(Mandatory=$false)]
     [string]$PostScript,
 
     # Hashtable for prescript parameters
     # Needs to be in the format of 
     # example: -PostScriptParams @{Drive = "C";LOG = "Results.txt"}
+    [Parameter(Mandatory=$false)]
     [hashtable]$PostScriptParams,
 
     # Expiration of the Azure Update Management Schedule
     [Parameter(Mandatory=$false)]
     [System.DateTimeOffset]$ExpiryTime,
-
     [switch]$force = $false
 )
 function Add-IndexNumberToArray (
@@ -419,7 +442,6 @@ If($AzureLogin -and !($SourceSubscriptionID))
     {
         [guid]$SourceSubscriptionID = $($SubscriptionArray[$SelectedSub - 1].ID)
     }
-    #$SubscriptionID = $SubscriptionID.Guid
 }
 Write-Host "Selecting the Source Azure Subscription: $($SourceSubscriptionID)..." -ForegroundColor Cyan
 $Null = Select-AzSubscription -SubscriptionId $SourceSubscriptionID
@@ -445,7 +467,6 @@ if($WSID -and $SourceSubscriptionID)
         break
     }
 }
-
 # Build a list of workspaces to choose from.  If workspace is in another subscription
 # provide the resourceID of that workspace as a parameter
 elseif(!($WSID))
@@ -453,6 +474,7 @@ elseif(!($WSID))
     [array]$Workspaces=@()
     try
     {
+        # Build an object to list all Log Analytics Workspaces
         $Workspaces = Add-IndexNumberToArray (Get-AzOperationalInsightsWorkspace) 
         Write-Host "Generating a list of workspaces from Azure Subscription Selected..." -ForegroundColor Cyan
 
@@ -567,6 +589,7 @@ If($ClassificationCategories)
     }
 } 
 
+# Build a query for applicable patches
 if((!($ApplicablePatchesQuery) -and (!($KBLIST)-and (!($SavedSearchID)))))
 {
     # Building a custom string for query to support a variable set of classifications
@@ -602,9 +625,11 @@ Write-Host "Leveraging the following query for applicable patches for target OS"
 write-host "$ApplicablePatchesQuery" -ForegroundColor Cyan
 }
 
+# If not KBList Provided and we aren't doing a RebootOnly - build the list
 if(!($KBLIST)-and !($RebootOptions -eq "RebootOnly"))
 {
     $KBLIST=@()
+    # Use a query from a saved search in LA if one is provided
     if($SavedSearchID)
     {
         $SavedSearch = Get-AzOperationalInsightsSavedSearch -ResourceGroupName $WorkspaceRG -WorkspaceName $WorkspaceName -SavedSearchId $SavedSearchID
@@ -730,7 +755,7 @@ if(!($AAAcountName -and $AAResourceGroupName))
     }
 }
 
-# Use workspacename and resourcegroup if that is provided as parameters and validate it is a workspace that can be accessed
+# Use Automation Account Name and resourcegroup if that is provided as parameters and validate it is an automation account that can be accessed
 else
 {
     try {
@@ -817,12 +842,12 @@ $azq = New-AzAutomationUpdateManagementAzureQuery -ResourceGroupName $AAResource
     -Tag $tags `
     -FilterOperator $queryFilterOperator
 
-#NEXT TO BE DONE PRE-POST Scripts and PARAMS: https://docs.microsoft.com/en-us/azure/automation/pre-post-scripts
-# Validate customer wants to continue to create the target schedule and Azure Update Management Configuration Patch List
+    # Validate customer wants to continue to create the target schedule and Azure Update Management Configuration Patch List
 # If Force used, will update without prompting
 if ($Force -OR $PSCmdlet.ShouldContinue("This operation will create an Azure Update Management Deployment Schedule called ""$($SoftwareUpdateScheduleName)"" in your selected target subscription. Continue?","Creating Target Schedule named ""$SoftwareUpdateScheduleName""") )
 {
     # BUG Description doesn't currently populate
+    # If there is an expiration date, use it in the creation of the schedule
     if($ExpiryTime)
     {
         $Schedule = New-AzAutomationSchedule -Name $SoftwareUpdateScheduleName -AutomationAccountName $AAAcountName `
@@ -835,6 +860,7 @@ if ($Force -OR $PSCmdlet.ShouldContinue("This operation will create an Azure Upd
         -ExpiryTime $ExpiryTime
         write-host "Creating / Updating the Target Azure Update Management Schedule ""$SoftwareUpdateScheduleName"" with expiration of $ExpiryTime" -ForegroundColor Cyan
     }
+    # No expiration date provided - this is t he default behavior
     else {
         $Schedule = New-AzAutomationSchedule -Name $SoftwareUpdateScheduleName -AutomationAccountName $AAAcountName `
         -ResourceGroupName $AAResourceGroupName `
@@ -847,6 +873,7 @@ if ($Force -OR $PSCmdlet.ShouldContinue("This operation will create an Azure Upd
     }
     if($TargetOS -eq "Windows")
     {
+        # Setup for Windows OS 
         $Null = New-AzAutomationSoftwareUpdateConfiguration -ResourceGroupName $AAResourceGroupName `
         -AutomationAccountName $AAAcountName `
         -Schedule $Schedule `
@@ -863,6 +890,7 @@ if ($Force -OR $PSCmdlet.ShouldContinue("This operation will create an Azure Upd
         write-host "Creating / Updating the Target Azure Update Management Deployment Schedule based on ""$SoftwareUpdateScheduleName"" for Windows" -ForegroundColor Cyan
     }
     elseif ($TargetOS -eq "Linux") {
+        # Setup for Linux OS (note different parameters)
         $Null = New-AzAutomationSoftwareUpdateConfiguration -ResourceGroupName $AAResourceGroupName `
         -AutomationAccountName $AAAcountName `
         -Schedule $Schedule `
